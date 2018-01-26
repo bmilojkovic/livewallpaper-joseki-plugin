@@ -1,0 +1,9 @@
+[Plugin]
+Loader=python
+Module=joseki
+IAge=1
+Name=Joseki
+Description=A live wallpaper that cycles through joseki in the game of go
+Authors=Branislav Milojkovic <bandza88@gmail.com>
+Copyright=Copyright © 2018 Branislav Milojkovic
+License-type=gpl-3-0

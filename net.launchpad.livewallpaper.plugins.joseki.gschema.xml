@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+	<enum id="net.launchpad.livewallpaper.plugins.joseki.update-interval">
+		<value nick="Every hour"        value="60" />
+		<value nick="Every 30 minutes"  value="30" />
+		<value nick="Every 10 minutes"  value="10" />
+		<value nick="Every minute"      value="1" />
+	</enum>
+
+	<enum id="net.launchpad.livewallpaper.plugins.joseki.date-format">
+		<value nick="Day.Month.Year"  value="0" />
+		<value nick="Day-Month-Year"  value="1" />
+		<value nick="Year.Month.Day"  value="2" />
+		<value nick="Year-Month-Day"  value="3" />
+		<value nick="Month.Day.Year"  value="4" />
+		<value nick="Month-Day-Year"  value="5" />
+	</enum>
+
+	<schema id="net.launchpad.livewallpaper.plugins.joseki" path="/net/launchpad/livewallpaper/plugins/joseki/">
+		
+            
+                <key type="i" name="main-size">
+                    <range min="128" max="512" />
+                    <default>320</default>
+                    <summary>Size</summary>
+                    <description>Size of the main circle</description>
+                </key>
+                <key type="s" name="main-color">
+                    
+                    <default>"rgba (71, 27, 42, 255)"</default>
+                    <summary>Color</summary>
+                    <description>Color of the main circle</description>
+                </key>
+                <key type="d" name="main-alpha">
+                    <range min="0.0" max="1.0" />
+                    
+                    <default>0.85</default>
+                    <summary>Transparency</summary>
+                    <description>Transparency of the main circle</description>
+                </key>
+                
+                <key type="s" name="font">
+                    
+                    <default>"Ubuntu Mono 40"</default>
+                    <summary>Font</summary>
+                    <description>The font to use for the time and the date</description>
+                </key>
+                <key type="s" name="font-color">
+                    
+                    <default>"rgba (255, 255, 255, 255)"</default>
+                    <summary>Font Color</summary>
+                    <description>Color of the time and the date. This is also the color of the dots.</description>
+                </key>
+			
+            
+                <key type="b" name="use-24-hour-clock">
+                    <default>true</default>
+                    <summary>Use 24 hour clock</summary>
+                    <description>Use 24 hour clock</description>
+                </key>
+                <key name="date-format" enum="net.launchpad.livewallpaper.plugins.joseki.date-format">
+                    <default>"Day.Month.Year"</default>
+                    <summary>Date format</summary>
+                    <description>Date format</description>
+                </key>
+            
+		
+		
+			<key type="s" name="colors">
+				
+                
+				<default>"/usr/share/livewallpaper/plugins/joseki/color.svg"</default>
+				<summary>Colors</summary>
+				<description>The first row of this image will be used as list of possible colors for the circles. Which color will be chosen depends on the value of update interval and the width of the image, so not every color will be used.</description>
+			</key>
+			<key name="update-interval" enum="net.launchpad.livewallpaper.plugins.joseki.update-interval">
+				<default>"Every hour"</default>
+				<summary>Update interval</summary>
+				<description>How often should the color change?</description>
+			</key>
+			<key type="i" name="fade-time">
+				<range min="0" max="5000" />
+				
+				<default>2000</default>
+				<summary>Fade time</summary>
+				<description>Time to switch from one color to another color in milliseconds</description>
+			</key>
+		
+	</schema>
+</schemalist>
