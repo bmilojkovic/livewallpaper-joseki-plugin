@@ -1,5 +1,5 @@
 
-import sgf, sys, random, pprint
+import sgf, random, pprint
 
 
 def print_move_node(node):
@@ -25,8 +25,6 @@ node_ind = 0
 pp = pprint.PrettyPrinter(indent = 4)
 
 while True:
-    #print(len(var.nodes))
-
     print_move_node(var.nodes[node_ind])
 
     node_ind = node_ind+1

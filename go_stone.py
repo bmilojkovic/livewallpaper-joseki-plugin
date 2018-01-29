@@ -34,15 +34,26 @@ class Stone(object):
             to_return += "L"
         else:
             to_return += "#"
+        to_return += ","
+        to_return += str(self.number)
         to_return += "]"
         return to_return
 
-    def draw(self):
+    def get_real_x(self):
         board_start = -Stone.board_size / 2
         square_start = board_start + Stone.square_size / 2
 
-        real_pos_x = square_start + Stone.square_size * self.pos_x
-        real_pos_y = square_start + Stone.square_size * self.pos_y
+        return square_start + Stone.square_size * self.pos_x
+
+    def get_real_y(self):
+        board_start = -Stone.board_size / 2
+        square_start = board_start + Stone.square_size / 2
+
+        return square_start + Stone.square_size * self.pos_y
+
+    def draw(self):
+        real_pos_x = self.get_real_x()
+        real_pos_y = self.get_real_y()
 
         if self.stone_color == Stone.BLACK:
             Stone.black_tex.enable()
