@@ -22,7 +22,7 @@
 from gi.repository import GObject, Gdk, GdkPixbuf, LW, Gio
 from gi.repository import cairo, Pango, PangoCairo
 from OpenGL.GL import *
-import cairo, math, sgf
+import cairo, math, sgf, random
 
 
 class Stone(object):
@@ -70,8 +70,10 @@ class Stone(object):
 
 class JosekiPlugin(GObject.Object, LW.Wallpaper):
     __gproperties__ = {
-        "main-alpha": (
-        float, "Transparency", "Transparency of the main circle", 0.0, 1.0, 0.85, GObject.PARAM_READWRITE)
+        "move-speed": (
+            int, "Move speed (ms)", "Move speed in milliseconds", 500, 10000, 1000, GObject.PARAM_READWRITE),
+        "joseki-file": (
+            str, "Joseki dictionary", "The SGF file with variations that should be displayed", "", GObject.PARAM_READWRITE)
     }
 
     def __init__(self):
@@ -118,36 +120,50 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         self.black_tex.update()
         Stone.black_tex = self.black_tex
 
-        self.main_alpha = 0.85
+        self.move_speed = 1000
+        self.joseki_file = None
         self.update_tex = 0
         self.kaya_img = None
         self.joseki_collection = None
-        self.current_node = None
+        self.current_variation = None
+        self.node_ind = 0
         self.stones = []
 
     def do_init_plugin(self):
         datadir = self.plugin_info.get_data_dir()
 
         self.kaya_img = cairo.ImageSurface.create_from_png(datadir + "/kaya.png")
+        self.joseki_file = datadir + "/kjd.sgf"
 
-        with open (datadir+"/example.sgf") as f:
-            self.joseki_collection = sgf.parse(f.read())
-
-        self.current_node = self.joseki_collection[0].nodes[0]
+        self.init_collection()
 
         # Bind settings
         settings = Gio.Settings.new("net.launchpad.livewallpaper.plugins.joseki")
-        settings.bind("main-alpha", self, "main-alpha", Gio.SettingsBindFlags.GET)
+        settings.bind("move-speed", self, "move_speed", Gio.SettingsBindFlags.GET)
+        settings.bind("joseki-file", self, "joseki_file", Gio.SettingsBindFlags.GET)
+
+    def init_collection(self):
+        with open(self.joseki_file) as f:
+            self.joseki_collection = sgf.parse(f.read())
+
+        self.current_variation = self.joseki_collection[0]
+        self.node_ind = 0
+        self.stones = []
 
     def do_get_property(self, prop):
-        if prop.name == "main-alpha":
-            return self.main_alpha
+        if prop.name == "move-speed":
+            return self.move_speed
+        elif prop.name == "joseki-file":
+            return self.joseki_file
         else:
             raise AttributeError("unknown property %s" % prop.name)
 
     def do_set_property(self, prop, value):
-        if prop.name == "main-alpha":
-            self.main_alpha = value
+        if prop.name == "move-speed":
+            self.move_speed = value
+        elif prop.name == "joseki-file":
+            self.joseki_file = value
+            self.init_collection()
         else:
             raise AttributeError("unknown property %s" % prop.name)
 
@@ -181,7 +197,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
 
         cr.set_line_width(1.0)
 
-        cr.rectangle(self.square_size / 2.0, self.square_size / 2.0, self.board_size - self.square_size, self.board_size - self.square_size)
+        cr.rectangle(self.square_size / 2.0, self.square_size / 2.0, self.board_size - self.square_size,
+                     self.board_size - self.square_size)
         cr.stroke()
 
         for i in range(20):
@@ -203,10 +220,14 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         else:
             return None
 
-        stone_x = ord(node_string[0][0]) - ord('a')
-        stone_y = ord(node_string[0][1]) - ord('a')
+        if len(node_string[0]) == 2:
+            stone_x = ord(node_string[0][0]) - ord('a') + 1
+            stone_y = ord(node_string[0][1]) - ord('a')
+        else:
+            print("Something odd " + node_string[0])
+            return None
 
-        return Stone(stone_x, stone_y, stone_color)
+        return Stone(stone_x, stone_y, stone_color, "1")
 
     def do_prepare_paint(self, ms_since_last_paint):
         self.update_tex -= ms_since_last_paint
@@ -215,18 +236,28 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         if self.update_tex <= 0:
             self.do_paint_board()
 
-            self.current_node = self.current_node.next
+            while self.node_ind >= len(self.current_variation.nodes):
+                variations = len(self.current_variation.children)
+                if variations == 0:
+                    self.current_variation = self.joseki_collection[0]
+                    self.node_ind = 0
+                    self.stones = []
+                else:
+                    self.current_variation = self.current_variation.children[random.randint(0, variations - 1)]
+                    self.node_ind = 0
 
-            if self.current_node is None:
-                self.current_node = self.joseki_collection[0].nodes[0]
-                self.stones = []
+            new_stone = self.make_stone(self.current_variation.nodes[self.node_ind])
+            while new_stone is None:
+                self.node_ind = self.node_ind + 1
+                if self.node_ind == len(self.current_variation.nodes):
+                    break
+                new_stone = self.make_stone(self.current_variation.nodes[self.node_ind])
 
-            while self.make_stone(self.current_node) is None:
-                self.current_node = self.current_node.next
+            if new_stone is not None:
+                self.stones.append(new_stone)
+                self.node_ind = self.node_ind + 1
 
-            self.stones.append(self.make_stone(self.current_node))
-
-            self.update_tex = 1000
+            self.update_tex = self.move_speed
 
     def draw_board(self):
         glColor4f(1.0, 1.0, 1.0, 1.0)
