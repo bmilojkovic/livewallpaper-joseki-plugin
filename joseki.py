@@ -22,50 +22,9 @@
 from gi.repository import GObject, Gdk, GdkPixbuf, LW, Gio
 from gi.repository import cairo, Pango, PangoCairo
 from OpenGL.GL import *
+from go_stone import Stone
+from go_algorithm import GoAlgorithm
 import cairo, math, sgf, random
-
-
-class Stone(object):
-    black_tex = 0
-    white_tex = 0
-    board_size = 0
-    square_size = 0
-    BLACK = 1
-    WHITE = 2
-
-    def __init__(self, pos_x, pos_y, stone_color, number):
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        self.stone_color = stone_color
-        self.number = number
-
-    def draw(self):
-        board_start = -Stone.board_size / 2
-        square_start = board_start + Stone.square_size / 2
-
-        real_pos_x = square_start + Stone.square_size * self.pos_x
-        real_pos_y = square_start + Stone.square_size * self.pos_y
-
-        if self.stone_color == Stone.BLACK:
-            Stone.black_tex.enable()
-        else:
-            Stone.white_tex.enable()
-
-        glBegin(GL_QUADS)
-        glTexCoord2d(1.0, 0.0)
-        glVertex2f(real_pos_x + Stone.square_size / 2, real_pos_y + Stone.square_size / 2)
-        glTexCoord2d(0.0, 0.0)
-        glVertex2f(real_pos_x - Stone.square_size / 2, real_pos_y + Stone.square_size / 2)
-        glTexCoord2d(0.0, 1.0)
-        glVertex2f(real_pos_x - Stone.square_size / 2, real_pos_y - Stone.square_size / 2)
-        glTexCoord2d(1.0, 1.0)
-        glVertex2f(real_pos_x + Stone.square_size / 2, real_pos_y - Stone.square_size / 2)
-        glEnd()
-
-        if self.stone_color == Stone.BLACK:
-            Stone.black_tex.disable()
-        else:
-            Stone.white_tex.disable()
 
 
 class JosekiPlugin(GObject.Object, LW.Wallpaper):
@@ -82,7 +41,7 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         self.background = LW.Background.new_from_colors(color1, color2, LW.BackgroundShadingType.BACKGROUNDVERTICAL)
 
         Stone.board_size = self.board_size = (Gdk.Screen.get_default().get_height() / 4.0) * 3.0
-        Stone.square_size = self.square_size = self.board_size / 20.0
+        Stone.square_size = self.square_size = self.board_size / 19.0
         Stone.stone_size = Stone.square_size - 1
         self.board_tex = LW.CairoTexture.new(self.board_size, self.board_size)
 
@@ -201,7 +160,7 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
                      self.board_size - self.square_size)
         cr.stroke()
 
-        for i in range(20):
+        for i in range(19):
             cr.move_to(self.square_size / 2.0, self.square_size / 2.0 + i * self.square_size)
             cr.line_to(self.board_size - self.square_size / 2.0, self.square_size / 2.0 + i * self.square_size)
             cr.move_to(self.square_size / 2.0 + i * self.square_size, self.square_size / 2.0)
@@ -221,7 +180,7 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             return None
 
         if len(node_string[0]) == 2:
-            stone_x = ord(node_string[0][0]) - ord('a') + 1
+            stone_x = ord(node_string[0][0]) - ord('a')
             stone_y = ord(node_string[0][1]) - ord('a')
         else:
             print("Something odd " + node_string[0])
@@ -255,6 +214,10 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
 
             if new_stone is not None:
                 self.stones.append(new_stone)
+                if new_stone.stone_color == Stone.WHITE:
+                    GoAlgorithm.remove_stones(self.stones, Stone.BLACK)
+                elif new_stone.stone_color == Stone.BLACK:
+                    GoAlgorithm.remove_stones(self.stones, Stone.WHITE)
                 self.node_ind = self.node_ind + 1
 
             self.update_tex = self.move_speed
