@@ -72,9 +72,6 @@ class GoAlgorithm(object):
         for stone in stones:
             board[stone.pos_x][stone.pos_y] = stone.stone_color
 
-        #print("Before remove:")
-        #GoAlgorithm.print_board(board)
-
         for stone in stones:
             if stone.stone_color == color:
                 tmp_board = GoAlgorithm.__clone_board(board)
@@ -83,5 +80,3 @@ class GoAlgorithm(object):
                 if count == 0:
                     GoAlgorithm.__erase_group(stone.pos_x, stone.pos_y, stone.stone_color, board, stones)
 
-        #print("After remove:")
-        #GoAlgorithm.print_board(board)
