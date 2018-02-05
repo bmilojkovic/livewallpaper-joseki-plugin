@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-	<schema id="net.launchpad.livewallpaper.plugins.joseki" path="/net/launchpad/livewallpaper/plugins/joseki/">
+	<enum id="net.launchpad.livewallpaper.plugins.joseki.corner">
+        <value nick="Top left"  value="1" />
+        <value nick="Top right"  value="2" />
+        <value nick="Bottom left"  value="3" />
+        <value nick="Bottom right"  value="4" />
+        <value nick="Random" value="5" />
+
+    </enum>
+
+    <schema id="net.launchpad.livewallpaper.plugins.joseki" path="/net/launchpad/livewallpaper/plugins/joseki/">
         <lw:tab name="Joseki settings">
             <lw:frame name="Joseki settings">
                 <key type="i" name="move-speed">
@@ -15,6 +24,11 @@
                     <default>"/usr/share/livewallpaper/plugins/joseki/kjd.sgf"</default>
                     <summary>Joseki dictionary</summary>
                     <description>The SGF file with variations that should be displayed</description>
+                </key>
+                <key name="joseki-corner" enum="net.launchpad.livewallpaper.plugins.joseki.corner">
+                    <default>"Top right"</default>
+                    <summary>The corner in which to display the joseki.</summary>
+                    <description>The corner in which to display the joseki.</description>
                 </key>
             </lw:frame>
         </lw:tab>

@@ -32,7 +32,10 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         "move-speed": (
             int, "Move speed (ms)", "Move speed in milliseconds", 500, 10000, 1000, GObject.PARAM_READWRITE),
         "joseki-file": (
-            str, "Joseki dictionary", "The SGF file with variations that should be displayed", "", GObject.PARAM_READWRITE)
+            str, "Joseki dictionary", "The SGF file with variations that should be displayed", "", GObject.PARAM_READWRITE),
+        "joseki-corner": (
+            GObject.TYPE_UINT, "Joseki corner", "The corner in which to display the joseki.", 1, 5, 2,
+            GObject.PARAM_READWRITE)
     }
 
     def __init__(self):
@@ -61,6 +64,11 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         cr.stroke()
 
         self.white_tex.update()
+        self.white_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        self.white_tex.disable()
+
         Stone.white_tex = self.white_tex
 
         # Black stones
@@ -78,10 +86,16 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         cr.stroke()
 
         self.black_tex.update()
+        self.black_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        self.black_tex.disable()
         Stone.black_tex = self.black_tex
 
         self.move_speed = 1000
         self.joseki_file = None
+        self.joseki_corner = 2
+        self.new_joseki_corner = 2
         self.update_tex = 0
         self.kaya_img = None
         self.joseki_collection = None
@@ -98,10 +112,13 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
 
         self.init_collection()
 
+        glClearColor(0.0, 0.0, 0.0, 1.0)
+
         # Bind settings
         settings = Gio.Settings.new("net.launchpad.livewallpaper.plugins.joseki")
         settings.bind("move-speed", self, "move_speed", Gio.SettingsBindFlags.GET)
         settings.bind("joseki-file", self, "joseki_file", Gio.SettingsBindFlags.GET)
+        LW.settings_bind_enum(settings, "joseki-corner", self, "joseki_corner", Gio.SettingsBindFlags.GET)
 
     def init_collection(self):
         with open(self.joseki_file) as f:
@@ -116,6 +133,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             return self.move_speed
         elif prop.name == "joseki-file":
             return self.joseki_file
+        elif prop.name == "joseki-corner":
+            return self.new_joseki_corner
         else:
             raise AttributeError("unknown property %s" % prop.name)
 
@@ -125,11 +144,12 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         elif prop.name == "joseki-file":
             self.joseki_file = value
             self.init_collection()
+        elif prop.name == "joseki-corner":
+            self.new_joseki_corner = value
         else:
             raise AttributeError("unknown property %s" % prop.name)
 
     def do_paint_numbers(self):
-        self.number_tex = LW.CairoTexture.new(self.board_size, self.board_size)
         cr = self.number_tex.cairo_create()
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.0)
@@ -166,6 +186,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             PangoCairo.show_layout(cr, layout)
 
         self.number_tex.update()
+
+        self.number_tex.cairo_destroy(cr)
 
     def do_paint_board(self):
         cr = self.board_tex.cairo_create()
@@ -217,6 +239,18 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         if len(node_string[0]) == 2:
             stone_x = ord(node_string[0][0]) - ord('a')
             stone_y = ord(node_string[0][1]) - ord('a')
+
+            if self.joseki_corner == 1: #top left
+                stone_x = 18 - stone_x
+                stone_y = 18 - stone_y
+            elif self.joseki_corner == 2: #top right
+                stone_y = 18 - stone_y
+            elif self.joseki_corner == 3: #bottom left
+                stone_x = 18 - stone_x
+            elif self.joseki_corner == 4: #bottom right
+                stone_x = stone_x #nothing to do here
+            #elif self.joseki_corner == 5: #random
+
         else:
             #Pass
             return None
@@ -233,24 +267,34 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             while self.node_ind >= len(self.current_variation.nodes):
                 variations = len(self.current_variation.children)
                 if variations == 0:
+                    #move line finished, branching into a random variation
                     self.current_variation = self.joseki_collection[0]
                     self.node_ind = 0
                     self.stones = []
                     self.current_number = 1
+                    if self.new_joseki_corner == 5: #random
+                        self.joseki_corner = random.randint(1, 4)
+                    elif self.new_joseki_corner != self.joseki_corner:
+                        self.joseki_corner = self.new_joseki_corner
                 else:
+                    #move line finished, branching into a random variation
                     self.current_variation = self.current_variation.children[random.randint(0, variations - 1)]
                     self.node_ind = 0
 
+            #try to make a move out of the current node
             new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
-            while new_stone is None:
+            while new_stone is None: #probably a comment node or something - move on to next one
                 self.node_ind = self.node_ind + 1
                 if self.node_ind == len(self.current_variation.nodes):
                     break
                 new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
 
             if new_stone is not None:
+                #successful in making stone object
                 self.stones.append(new_stone)
                 self.current_number += 1
+
+                #capture stones
                 if new_stone.stone_color == Stone.WHITE:
                     GoAlgorithm.remove_stones(self.stones, Stone.BLACK)
                 elif new_stone.stone_color == Stone.BLACK:
@@ -292,12 +336,13 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         glEnd()
 
     def do_paint(self, output):
-        glClearColor(0.0, 0.0, 0.0, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE)
         self.background.draw(output)
 
         self.board_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         self.draw_board()
         self.board_tex.disable()
 
@@ -309,6 +354,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             stone.draw()
 
         self.number_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         self.draw_board()
         self.number_tex.disable()
 
