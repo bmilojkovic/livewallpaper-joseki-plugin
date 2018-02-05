@@ -47,7 +47,16 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         Stone.square_size = self.square_size = self.board_size / 19.0
         Stone.stone_size = Stone.square_size - 1
         self.board_tex = LW.CairoTexture.new(self.board_size, self.board_size)
+        self.board_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        self.board_tex.disable()
+
         self.number_tex = LW.CairoTexture.new(self.board_size, self.board_size)
+        self.number_tex.enable()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        self.number_tex.disable()
 
         # White stones
         self.white_tex = LW.CairoTexture.new(self.square_size, self.square_size)
@@ -186,8 +195,6 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             PangoCairo.show_layout(cr, layout)
 
         self.number_tex.update()
-
-        self.number_tex.cairo_destroy(cr)
 
     def do_paint_board(self):
         cr = self.board_tex.cairo_create()
@@ -341,8 +348,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         self.background.draw(output)
 
         self.board_tex.enable()
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         self.draw_board()
         self.board_tex.disable()
 
@@ -354,8 +361,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
             stone.draw()
 
         self.number_tex.enable()
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         self.draw_board()
         self.number_tex.disable()
 
