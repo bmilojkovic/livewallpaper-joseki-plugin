@@ -77,8 +77,10 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         datadir = self.plugin_info.get_data_dir()
 
         self.kaya_img = cairo.ImageSurface.create_from_png(datadir + "/kaya.png")
-        self.joseki_file = datadir + "/kjd.sgf"
 
+        self.background = LW.Background.new_from_file(datadir + "/desk.png", LW.BackgroundRenderType.BACKGROUNDTILED)
+
+        self.joseki_file = datadir + "/kjd.sgf"
         self.init_collection()
 
         glClearColor(0.0, 0.0, 0.0, 1.0)
