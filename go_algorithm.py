@@ -58,7 +58,7 @@ class GoAlgorithm(object):
             board[pos_x][pos_y] = Stone.EMPTY
             for stone in stones:
                 if stone.pos_x == pos_x and stone.pos_y == pos_y:
-                    stones.remove(stone)
+                    stone.removed = True
 
             GoAlgorithm.__erase_group(pos_x - 1, pos_y, color, board, stones)
             GoAlgorithm.__erase_group(pos_x + 1, pos_y, color, board, stones)

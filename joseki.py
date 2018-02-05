@@ -61,11 +61,13 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         self.number_tex.disable()
 
+        self.stone_appear_limit = 30
+        self.stone_appear_time = 0
         self.move_speed = 1000
         self.joseki_file = None
         self.joseki_corner = 2
         self.new_joseki_corner = 2
-        self.update_tex = 0
+        self.next_stone_time = 0
         self.kaya_img = None
         self.joseki_collection = None
         self.current_variation = None
@@ -135,9 +137,9 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
 
         for stone in self.stones:
             if stone.stone_color == Stone.WHITE:
-                cr.set_source_rgba(0.0, 0.0, 0.0, 1.0)
+                cr.set_source_rgba(0.0, 0.0, 0.0, stone.stone_alpha)
             elif stone.stone_color == Stone.BLACK:
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0)
+                cr.set_source_rgba(1.0, 1.0, 1.0, stone.stone_alpha)
             layout = PangoCairo.create_layout(cr)
 
             pctx = layout.get_context()
@@ -228,12 +230,11 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         return Stone(stone_x, stone_y, stone_color, number)
 
     def do_prepare_paint(self, ms_since_last_paint):
-        self.update_tex -= ms_since_last_paint
+        self.next_stone_time -= ms_since_last_paint
+        self.stone_appear_time -= ms_since_last_paint
 
-        # Update main texture
-        if self.update_tex <= 0:
-            # self.do_paint_board()
-
+        # place next stone, check if finished variation, etc.
+        if self.next_stone_time <= 0:
             while self.node_ind >= len(self.current_variation.nodes):
                 variations = len(self.current_variation.children)
                 if variations == 0:
@@ -271,8 +272,21 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
                     GoAlgorithm.remove_stones(self.stones, Stone.WHITE)
                 self.node_ind = self.node_ind + 1
 
-            self.do_paint_numbers()
-            self.update_tex = self.move_speed
+            self.next_stone_time = self.move_speed
+
+        if self.stone_appear_time < 0:  # should increment alpha of latest stone
+            if len(self.stones) > 0:  # if there are stones
+                self.stones[len(self.stones)-1].stone_alpha += 0.1
+
+            self.stone_appear_time = self.stone_appear_limit
+
+        for stone in self.stones:
+            if stone.removed:
+                stone.stone_alpha -= 0.1
+            if stone.stone_alpha <= 0:
+                self.stones.remove(stone)
+
+        self.do_paint_numbers()
 
     def do_adjust_viewport(self, output):
         glPushAttrib(GL_TEXTURE_BIT)

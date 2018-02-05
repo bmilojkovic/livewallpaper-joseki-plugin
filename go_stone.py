@@ -28,6 +28,8 @@ class Stone(object):
         self.pos_y = pos_y  # 0-18 value indicating position of stone from bottom edge of board
         self.stone_color = stone_color  # commonly BLACK or WHITE
         self.number = number
+        self.stone_alpha = 0
+        self.removed = False
 
     def __str__(self):
         to_return = "["
@@ -71,6 +73,7 @@ class Stone(object):
         else:
             Stone.white_tex.enable()
 
+        glColor4f(1.0, 1.0, 1.0, self.stone_alpha)
         glBegin(GL_QUADS)
         glTexCoord2d(1.0, 0.0)
         glVertex2f(real_pos_x + Stone.square_size / 2, real_pos_y + Stone.square_size / 2)
