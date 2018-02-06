@@ -34,12 +34,18 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
     __gproperties__ = {
         "move-speed": (
             int, "Move speed (ms)", "Move speed in milliseconds", 500, 10000, 1000, GObject.PARAM_READWRITE),
+        "joseki-pause": (
+            int, "Joseki pause (s)", "Pause between josekis in seconds", 1, 10, 5, GObject.PARAM_READWRITE),
         "joseki-file": (
             str, "Joseki dictionary", "The SGF file with variations that should be displayed", "", GObject.PARAM_READWRITE),
         "joseki-corner": (
             GObject.TYPE_UINT, "Joseki corner", "The corner in which to display the joseki.", 1, 5, 2,
             GObject.PARAM_READWRITE)
     }
+
+    STATE_JOSEKI_STARTING = 1
+    STATE_DURING_JOSEKI = 2
+    STATE_JOSEKI_FINISHED = 3
 
     def __init__(self):
         color1 = Gdk.Color(255 * 148, 255 * 77, 255 * 85)
@@ -64,16 +70,19 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         self.stone_appear_limit = 30
         self.stone_appear_time = 0
         self.move_speed = 1000
+        self.next_stone_time = 0
+        self.joseki_pause = 3
+        self.joseki_pause_time = 0
         self.joseki_file = None
         self.joseki_corner = 2
         self.new_joseki_corner = 2
-        self.next_stone_time = 0
         self.kaya_img = None
         self.joseki_collection = None
         self.current_variation = None
         self.node_ind = 0
         self.stones = []
         self.current_number = 1
+        self.animation_state = JosekiPlugin.STATE_JOSEKI_STARTING
 
     def do_init_plugin(self):
         datadir = self.plugin_info.get_data_dir()
@@ -93,6 +102,7 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         # Bind settings
         settings = Gio.Settings.new("net.launchpad.livewallpaper.plugins.joseki")
         settings.bind("move-speed", self, "move_speed", Gio.SettingsBindFlags.GET)
+        settings.bind("joseki-pause", self, "joseki_pause", Gio.SettingsBindFlags.GET)
         settings.bind("joseki-file", self, "joseki_file", Gio.SettingsBindFlags.GET)
         LW.settings_bind_enum(settings, "joseki-corner", self, "joseki_corner", Gio.SettingsBindFlags.GET)
 
@@ -107,6 +117,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
     def do_get_property(self, prop):
         if prop.name == "move-speed":
             return self.move_speed
+        elif prop.name == "joseki-pause":
+            return self.joseki_pause
         elif prop.name == "joseki-file":
             return self.joseki_file
         elif prop.name == "joseki-corner":
@@ -117,6 +129,8 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
     def do_set_property(self, prop, value):
         if prop.name == "move-speed":
             self.move_speed = value
+        elif prop.name == "joseki-pause":
+            self.joseki_pause = value
         elif prop.name == "joseki-file":
             self.joseki_file = value
             self.init_collection()
@@ -230,49 +244,74 @@ class JosekiPlugin(GObject.Object, LW.Wallpaper):
         return Stone(stone_x, stone_y, stone_color, number)
 
     def do_prepare_paint(self, ms_since_last_paint):
-        self.next_stone_time -= ms_since_last_paint
+
         self.stone_appear_time -= ms_since_last_paint
 
-        # place next stone, check if finished variation, etc.
-        if self.next_stone_time <= 0:
-            while self.node_ind >= len(self.current_variation.nodes):
-                variations = len(self.current_variation.children)
-                if variations == 0:
-                    # move line finished, branching into a random variation
-                    self.current_variation = self.joseki_collection[0]
-                    self.node_ind = 0
-                    self.stones = []
-                    self.current_number = 1
-                    if self.new_joseki_corner == 5: #random
-                        self.joseki_corner = random.randint(1, 4)
-                    elif self.new_joseki_corner != self.joseki_corner:
-                        self.joseki_corner = self.new_joseki_corner
-                else:
-                    # move line finished, branching into a random variation
-                    self.current_variation = self.current_variation.children[random.randint(0, variations - 1)]
-                    self.node_ind = 0
+        if self.animation_state == JosekiPlugin.STATE_JOSEKI_FINISHED:
+            self.joseki_pause_time -= ms_since_last_paint
+            if self.joseki_pause_time <= 0:
+                self.animation_state = JosekiPlugin.STATE_JOSEKI_STARTING
 
-            # try to make a move out of the current node
-            new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
-            while new_stone is None: #probably a comment node or something - move on to next one
-                self.node_ind = self.node_ind + 1
-                if self.node_ind == len(self.current_variation.nodes):
-                    break
-                new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
-
-            if new_stone is not None:
-                # successful in making stone object
-                self.stones.append(new_stone)
-                self.current_number += 1
-
-                # capture stones
-                if new_stone.stone_color == Stone.WHITE:
-                    GoAlgorithm.remove_stones(self.stones, Stone.BLACK)
-                elif new_stone.stone_color == Stone.BLACK:
-                    GoAlgorithm.remove_stones(self.stones, Stone.WHITE)
-                self.node_ind = self.node_ind + 1
-
+        if self.animation_state == JosekiPlugin.STATE_JOSEKI_STARTING:
+            # move line finished, starting a new joseki
+            self.current_variation = self.joseki_collection[0]
+            self.node_ind = 0
+            self.stones = []
+            self.current_number = 1
+            if self.new_joseki_corner == 5:  # random
+                self.joseki_corner = random.randint(1, 4)
+            elif self.new_joseki_corner != self.joseki_corner:
+                self.joseki_corner = self.new_joseki_corner
             self.next_stone_time = self.move_speed
+            self.animation_state = JosekiPlugin.STATE_DURING_JOSEKI
+
+        if self.animation_state == JosekiPlugin.STATE_DURING_JOSEKI:
+            self.next_stone_time -= ms_since_last_paint
+
+            # place next stone, check if finished variation, etc.
+            if self.next_stone_time <= 0:
+                while self.node_ind >= len(self.current_variation.nodes):
+                    variations = len(self.current_variation.children)
+                    if variations == 0:
+                        self.animation_state = JosekiPlugin.STATE_JOSEKI_FINISHED
+                        self.joseki_pause_time = self.joseki_pause * 1000
+                        break
+                        # move line finished, starting a new joseki
+                        # self.current_variation = self.joseki_collection[0]
+                        # self.node_ind = 0
+                        # self.stones = []
+                        # self.current_number = 1
+                        # if self.new_joseki_corner == 5: #random
+                        #    self.joseki_corner = random.randint(1, 4)
+                        # elif self.new_joseki_corner != self.joseki_corner:
+                        #    self.joseki_corner = self.new_joseki_corner
+                    else:
+                        # move line finished, branching into a random variation
+                        self.current_variation = self.current_variation.children[random.randint(0, variations - 1)]
+                        self.node_ind = 0
+
+                if self.animation_state == JosekiPlugin.STATE_DURING_JOSEKI:
+                    # try to make a move out of the current node
+                    new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
+                    while new_stone is None:  # probably a comment node or something - move on to next one
+                        self.node_ind = self.node_ind + 1
+                        if self.node_ind == len(self.current_variation.nodes):
+                            break
+                        new_stone = self.make_stone(self.current_variation.nodes[self.node_ind], self.current_number)
+
+                    if new_stone is not None:
+                        # successful in making stone object
+                        self.stones.append(new_stone)
+                        self.current_number += 1
+
+                        # capture stones
+                        if new_stone.stone_color == Stone.WHITE:
+                            GoAlgorithm.remove_stones(self.stones, Stone.BLACK)
+                        elif new_stone.stone_color == Stone.BLACK:
+                            GoAlgorithm.remove_stones(self.stones, Stone.WHITE)
+                        self.node_ind = self.node_ind + 1
+
+                self.next_stone_time = self.move_speed
 
         if self.stone_appear_time < 0:  # should increment alpha of latest stone
             if len(self.stones) > 0:  # if there are stones

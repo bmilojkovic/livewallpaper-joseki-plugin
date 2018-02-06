@@ -15,6 +15,12 @@
                 <summary>Move speed (ms)</summary>
                 <description>Move speed in milliseconds</description>
             </key>
+            <key type="i" name="joseki-pause">
+                <range min="1" max="10" />
+                <default>3</default>
+                <summary>Joseki pause (s)</summary>
+                <description>Pause between josekis in seconds</description>
+            </key>
             <key type="s" name="joseki-file">
 				<default>"/usr/share/livewallpaper/plugins/joseki/kjd.sgf"</default>
 				<summary>Joseki dictionary</summary>

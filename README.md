@@ -5,3 +5,5 @@ Features include:
 * Chosing corner in which to display joseki (including random)
 * Custom joseki dictionary
 * Stone placement speed
+
+![Screenshot](screenshot.png "Screenshot")
