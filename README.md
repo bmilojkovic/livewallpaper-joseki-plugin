@@ -7,3 +7,10 @@ Features include:
 * Stone placement speed
 
 ![Screenshot](screenshot.png "Screenshot")
+
+## Installation
+
+* Install livewallpaper from your distro, or from
+  [here](https://launchpad.net/livewallpaper)
+* Open up install.sh and make sure that the path to livewallpaper is correct
+* ./install.sh

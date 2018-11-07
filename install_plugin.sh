@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-sudo cp joseki.xml /usr/lib/livewallpaper/plugins/joseki/
-sudo cp joseki.py /usr/lib/livewallpaper/plugins/joseki/
-sudo cp go_stone.py /usr/lib/livewallpaper/plugins/joseki/
-sudo cp go_algorithm.py /usr/lib/livewallpaper/plugins/joseki/
-sudo cp joseki.plugin /usr/lib/livewallpaper/plugins/joseki/
+
+LIVEWALLPAPER_PATH=/usr/lib/livewallpaper/
+
+mkdir -p $LIVEWALLPAPER_PATH/plugins/joseki
+sudo cp joseki.xml $LIVEWALLPAPER_PATH/plugins/joseki/
+sudo cp joseki.py $LIVEWALLPAPER_PATH/plugins/joseki/
+sudo cp go_stone.py $LIVEWALLPAPER_PATH/plugins/joseki/
+sudo cp go_algorithm.py $LIVEWALLPAPER_PATH/plugins/joseki/
+sudo cp joseki.plugin $LIVEWALLPAPER_PATH/plugins/joseki/
 sudo cp net.launchpad.livewallpaper.plugins.joseki.gschema.xml /usr/share/glib-2.0/schemas/
 sudo cp kaya.png /usr/share/livewallpaper/plugins/joseki/
 sudo cp desk.png /usr/share/livewallpaper/plugins/joseki/
