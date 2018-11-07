@@ -12,5 +12,5 @@ Features include:
 
 * Install livewallpaper from your distro, or from
   [here](https://launchpad.net/livewallpaper)
-* Open up install.sh and make sure that the path to livewallpaper is correct
-* ./install.sh
+* Open up install_plugin.sh and make sure that the path to livewallpaper is correct
+* ./install_plugin.sh
